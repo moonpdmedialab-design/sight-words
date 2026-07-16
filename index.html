@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sight Words 300 — 순간 인식 훈련</title>
+<style>
+  :root{
+    --board: #1e3a2f;
+    --board-dark: #16281f;
+    --chalk: #f2efe4;
+    --chalk-dim: #cfd6c8;
+    --chalk-yellow: #e8c468;
+    --chalk-pink: #e2867a;
+    --chalk-blue: #8fb8c9;
+    --rail: #6b4a35;
+    --rail-dark: #4a3222;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background: radial-gradient(ellipse at 50% -10%, #2a4a3b 0%, var(--board) 45%, var(--board-dark) 100%);
+    color: var(--chalk);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 18px 14px 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* faint chalk dust texture */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; opacity:0.05;
+    background-image: radial-gradient(circle at 20% 30%, white 0.5px, transparent 0.5px),
+                       radial-gradient(circle at 70% 65%, white 0.5px, transparent 0.5px),
+                       radial-gradient(circle at 40% 80%, white 0.5px, transparent 0.5px);
+    background-size: 140px 140px, 180px 180px, 120px 120px;
+  }
+  header{
+    width:100%; max-width:520px;
+    text-align:center;
+    padding: 10px 0 18px;
+    border-bottom: 6px solid var(--rail);
+    margin-bottom: 20px;
+    position:relative;
+  }
+  header::after{
+    content:"";
+    position:absolute; left:-14px; right:-14px; bottom:-6px; height:10px;
+    background: var(--rail-dark);
+    border-radius: 0 0 4px 4px;
+  }
+  h1{
+    font-family: "Segoe Print","Comic Sans MS",cursive;
+    font-weight:700;
+    font-size: 28px;
+    letter-spacing: 0.5px;
+    margin: 0 0 4px;
+    color: var(--chalk);
+    text-shadow: 0 0 1px rgba(242,239,228,0.3);
+  }
+  .subtitle{
+    font-size: 13px;
+    color: var(--chalk-dim);
+    letter-spacing: 0.3px;
+  }
+  main{ width:100%; max-width:520px; flex:1; display:flex; flex-direction:column; }
+
+  /* ===== Nav tabs ===== */
+  nav{
+    display:flex; gap:8px; margin-bottom:18px;
+  }
+  nav button{
+    flex:1;
+    background: transparent;
+    border: 1.5px dashed rgba(242,239,228,0.35);
+    color: var(--chalk-dim);
+    padding: 10px 4px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  nav button.active{
+    color: var(--board-dark);
+    background: var(--chalk-yellow);
+    border-color: var(--chalk-yellow);
+    font-weight:700;
+  }
+
+  .screen{ display:none; flex-direction:column; gap:16px; }
+  .screen.active{ display:flex; }
+
+  /* ===== Home / stats ===== */
+  .stat-card{
+    background: rgba(242,239,228,0.06);
+    border: 1px solid rgba(242,239,228,0.15);
+    border-radius: var(--radius);
+    padding: 18px;
+    text-align:center;
+  }
+  .stat-row{ display:flex; justify-content:space-around; margin-top:10px; }
+  .stat-num{ font-size:26px; font-weight:800; color: var(--chalk-yellow); }
+  .stat-label{ font-size:12px; color: var(--chalk-dim); margin-top:2px; }
+  .group-grid{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:10px;
+  }
+  .group-btn{
+    background: rgba(242,239,228,0.06);
+    border: 1px solid rgba(242,239,228,0.18);
+    color: var(--chalk);
+    border-radius: 10px;
+    padding: 14px 6px;
+    text-align:center;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .group-btn .rng{ font-size:12px; color:var(--chalk-dim); display:block; margin-top:4px;}
+  .group-btn .pct{ font-size:11px; color:var(--chalk-yellow); display:block; margin-top:6px; }
+
+  /* ===== Flash mode ===== */
+  .flash-wrap{
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    flex:1; justify-content:center;
+    min-height: 340px;
+  }
+  .flash-card{
+    width:100%; max-width:380px;
+    aspect-ratio: 3/2;
+    background: rgba(0,0,0,0.15);
+    border: 2px solid rgba(242,239,228,0.25);
+    border-radius: var(--radius);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 10px;
+    position:relative;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .flash-word{
+    font-size: 44px;
+    font-weight:800;
+    letter-spacing: 0.5px;
+    text-align:center;
+    padding: 0 12px;
+  }
+  .flash-meaning{
+    font-size: 18px;
+    color: var(--chalk-blue);
+    opacity:0;
+    transition: opacity .2s ease;
+  }
+  .flash-meaning.show{ opacity:1; }
+  .flash-progress{
+    font-size:12px; color:var(--chalk-dim);
+  }
+  .flash-controls{
+    display:flex; gap:10px; width:100%; max-width:380px;
+  }
+  .btn{
+    flex:1;
+    padding: 13px 10px;
+    border-radius: 10px;
+    border:none;
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .btn-know{ background: var(--chalk-blue); color: var(--board-dark); }
+  .btn-unknow{ background: var(--chalk-pink); color: var(--board-dark); }
+  .btn-speak{
+    background: transparent; border: 1.5px solid rgba(242,239,228,0.4);
+    color: var(--chalk); width:46px; flex:none; font-size:18px; border-radius:10px;
+    padding: 13px 0;
+  }
+  .btn-nav{
+    background: rgba(242,239,228,0.08); border: 1.5px solid rgba(242,239,228,0.25);
+    color: var(--chalk); flex:1; font-size:18px; font-weight:700; border-radius:10px;
+    padding: 13px 0; font-family:inherit; cursor:pointer;
+  }
+  .btn-nav:disabled{ opacity:0.3; cursor:default; }
+  .speed-row{
+    display:flex; align-items:center; gap:10px; justify-content:center; margin-top:4px;
+    font-size:12px; color:var(--chalk-dim);
+  }
+  .speed-row select{
+    background: rgba(242,239,228,0.08); color:var(--chalk); border:1px solid rgba(242,239,228,0.25);
+    border-radius:6px; padding:4px 8px; font-family:inherit; font-size:12px;
+  }
+
+  /* ===== List mode ===== */
+  .list-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 14px;
+    background: rgba(242,239,228,0.05);
+    border-bottom: 1px solid rgba(242,239,228,0.1);
+    border-left: 4px solid transparent;
+  }
+  .list-item:first-child{ border-radius: 10px 10px 0 0; }
+  .list-item:last-child{ border-radius: 0 0 10px 10px; border-bottom:none; }
+  .list-item.status-known{ border-left-color: var(--chalk-blue); background: rgba(143,184,201,0.10); }
+  .list-item.status-unknown{ border-left-color: var(--chalk-pink); background: rgba(226,134,122,0.08); }
+  .list-rank{ font-size:11px; color: var(--chalk-dim); width:28px; }
+  .list-word{ font-size:17px; font-weight:700; flex:1; }
+  .list-item.status-known .list-word{ color: var(--chalk-blue); }
+  .list-item.status-unknown .list-word{ color: var(--chalk-pink); }
+  .list-status-icon{ width:20px; font-size:13px; text-align:center; flex:none; }
+  .list-meaning{ font-size:13px; color: var(--chalk-blue); text-align:right; flex:1; }
+  .back-link{
+    background:none; border:none; color:var(--chalk-yellow); font-family:inherit;
+    font-size:14px; cursor:pointer; text-align:left; padding:4px 0; margin-bottom:4px;
+  }
+
+  /* ===== Quiz mode ===== */
+  .quiz-word{
+    font-size: 38px; font-weight:800; text-align:center; margin: 10px 0 4px;
+  }
+  .quiz-options{ display:flex; flex-direction:column; gap:10px; }
+  .quiz-opt{
+    background: rgba(242,239,228,0.06);
+    border: 1.5px solid rgba(242,239,228,0.2);
+    color: var(--chalk);
+    padding: 14px;
+    border-radius: 10px;
+    font-family:inherit; font-size:15px;
+    text-align:left;
+    cursor:pointer;
+  }
+  .quiz-opt.correct{ background: var(--chalk-blue); color:var(--board-dark); border-color:var(--chalk-blue); }
+  .quiz-opt.wrong{ background: var(--chalk-pink); color:var(--board-dark); border-color:var(--chalk-pink); }
+  .quiz-status{ text-align:center; font-size:13px; color:var(--chalk-dim); }
+
+  .empty{ text-align:center; color:var(--chalk-dim); padding: 30px 10px; font-size:14px; }
+
+  footer{
+    margin-top: 24px; font-size:11px; color: rgba(242,239,228,0.35); text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sight Words 300</h1>
+  <div class="subtitle">Fry 고빈도 단어 · 순간 인식 훈련</div>
+</header>
+
+<main>
+  <nav>
+    <button class="nav-btn active" data-screen="home">홈</button>
+    <button class="nav-btn" data-screen="flash">순간인식</button>
+    <button class="nav-btn" data-screen="list">목록</button>
+    <button class="nav-btn" data-screen="quiz">퀴즈</button>
+  </nav>
+
+  <!-- HOME -->
+  <section class="screen active" id="screen-home">
+    <div class="stat-card">
+      <div style="font-size:14px; color:var(--chalk-dim);">전체 진행률</div>
+      <div class="stat-row">
+        <div><div class="stat-num" id="stat-known">0</div><div class="stat-label">외운 단어</div></div>
+        <div><div class="stat-num" id="stat-total">300</div><div class="stat-label">전체</div></div>
+        <div><div class="stat-num" id="stat-pct">0%</div><div class="stat-label">완료율</div></div>
+      </div>
+    </div>
+    <div style="font-size:13px; color:var(--chalk-dim); padding: 0 2px;">
+      그룹을 선택하면 해당 25개 단어로 순간인식 훈련을 시작해요.
+    </div>
+    <div class="group-grid" id="group-grid"></div>
+  </section>
+
+  <!-- FLASH -->
+  <section class="screen" id="screen-flash">
+    <button class="back-link" id="flash-back">← 그룹 다시 고르기</button>
+    <div class="flash-wrap">
+      <div class="flash-progress" id="flash-progress">1 / 25</div>
+      <div class="flash-card" id="flash-card">
+        <div class="flash-word" id="flash-word">the</div>
+        <div class="flash-meaning" id="flash-meaning">그 (정관사)</div>
+      </div>
+      <div class="speed-row">
+        노출 시간
+        <select id="speed-select">
+          <option value="600">0.6초 (빠름)</option>
+          <option value="1000" selected>1.0초</option>
+          <option value="1500">1.5초</option>
+          <option value="0">수동(탭해서 확인)</option>
+        </select>
+      </div>
+      <div class="flash-controls">
+        <button class="btn-nav" id="flash-prev">◀</button>
+        <button class="btn-speak" id="flash-speak">🔊</button>
+        <button class="btn-nav" id="flash-next">▶</button>
+      </div>
+      <div class="flash-controls">
+        <button class="btn btn-unknow" id="flash-unknow">모름</button>
+        <button class="btn btn-know" id="flash-know">암기함</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIST -->
+  <section class="screen" id="screen-list">
+    <button class="back-link" id="list-back">← 그룹 다시 고르기</button>
+    <div id="list-container"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="screen-quiz">
+    <button class="back-link" id="quiz-back">← 그룹 다시 고르기</button>
+    <div class="quiz-status" id="quiz-status">문제 1 / 10</div>
+    <div class="quiz-word" id="quiz-word">the</div>
+    <div class="quiz-options" id="quiz-options"></div>
+  </section>
+</main>
+
+<footer>오프라인에서도 작동해요 · 진행 상황은 이 브라우저에 저장돼요</footer>
+
+<script>
+const WORDS = [{"id": "001", "word": "the", "meaning": "그 (정관사)", "rank": 1}, {"id": "002", "word": "of", "meaning": "~의", "rank": 2}, {"id": "003", "word": "and", "meaning": "그리고", "rank": 3}, {"id": "004", "word": "a", "meaning": "하나의", "rank": 4}, {"id": "005", "word": "to", "meaning": "~에게/~하려고", "rank": 5}, {"id": "006", "word": "in", "meaning": "~안에", "rank": 6}, {"id": "007", "word": "is", "meaning": "~이다", "rank": 7}, {"id": "008", "word": "you", "meaning": "너, 당신", "rank": 8}, {"id": "009", "word": "that", "meaning": "저것, 그것", "rank": 9}, {"id": "010", "word": "it", "meaning": "그것", "rank": 10}, {"id": "011", "word": "he", "meaning": "그(남자)", "rank": 11}, {"id": "012", "word": "or", "meaning": "또는", "rank": 12}, {"id": "013", "word": "one", "meaning": "하나", "rank": 13}, {"id": "014", "word": "had", "meaning": "가지고 있었다", "rank": 14}, {"id": "015", "word": "by", "meaning": "~에 의해", "rank": 15}, {"id": "016", "word": "words", "meaning": "단어들", "rank": 16}, {"id": "017", "word": "but", "meaning": "그러나", "rank": 17}, {"id": "018", "word": "not", "meaning": "아니다", "rank": 18}, {"id": "019", "word": "what", "meaning": "무엇", "rank": 19}, {"id": "020", "word": "all", "meaning": "모든", "rank": 20}, {"id": "021", "word": "were", "meaning": "(be동사 과거, 복수)", "rank": 21}, {"id": "022", "word": "we", "meaning": "우리", "rank": 22}, {"id": "023", "word": "will", "meaning": "~할 것이다", "rank": 23}, {"id": "024", "word": "up", "meaning": "위로", "rank": 24}, {"id": "025", "word": "other", "meaning": "다른", "rank": 25}, {"id": "026", "word": "about", "meaning": "~에 대해", "rank": 26}, {"id": "027", "word": "out", "meaning": "밖으로", "rank": 27}, {"id": "028", "word": "many", "meaning": "많은", "rank": 28}, {"id": "029", "word": "then", "meaning": "그다음", "rank": 29}, {"id": "030", "word": "them", "meaning": "그들을", "rank": 30}, {"id": "031", "word": "these", "meaning": "이것들", "rank": 31}, {"id": "032", "word": "so", "meaning": "그래서", "rank": 32}, {"id": "033", "word": "some", "meaning": "몇몇의", "rank": 33}, {"id": "034", "word": "number", "meaning": "숫자", "rank": 34}, {"id": "035", "word": "no", "meaning": "아니오", "rank": 35}, {"id": "036", "word": "way", "meaning": "방법, 길", "rank": 36}, {"id": "037", "word": "could", "meaning": "~할 수 있었다", "rank": 37}, {"id": "038", "word": "people", "meaning": "사람들", "rank": 38}, {"id": "039", "word": "my", "meaning": "나의", "rank": 39}, {"id": "040", "word": "than", "meaning": "~보다", "rank": 40}, {"id": "041", "word": "first", "meaning": "첫 번째", "rank": 41}, {"id": "042", "word": "water", "meaning": "물", "rank": 42}, {"id": "043", "word": "been", "meaning": "(have의 과거분사)", "rank": 43}, {"id": "044", "word": "called", "meaning": "~라고 불리는", "rank": 44}, {"id": "045", "word": "was", "meaning": "(be동사 과거)", "rank": 45}, {"id": "046", "word": "for", "meaning": "~을 위해", "rank": 46}, {"id": "047", "word": "on", "meaning": "~위에", "rank": 47}, {"id": "048", "word": "are", "meaning": "(be동사)", "rank": 48}, {"id": "049", "word": "as", "meaning": "~로서, ~처럼", "rank": 49}, {"id": "050", "word": "with", "meaning": "~와 함께", "rank": 50}, {"id": "051", "word": "his", "meaning": "그의", "rank": 51}, {"id": "052", "word": "they", "meaning": "그들", "rank": 52}, {"id": "053", "word": "I", "meaning": "나", "rank": 53}, {"id": "054", "word": "at", "meaning": "~에서", "rank": 54}, {"id": "055", "word": "be", "meaning": "~이다", "rank": 55}, {"id": "056", "word": "this", "meaning": "이것", "rank": 56}, {"id": "057", "word": "have", "meaning": "가지다", "rank": 57}, {"id": "058", "word": "when", "meaning": "언제", "rank": 58}, {"id": "059", "word": "your", "meaning": "너의", "rank": 59}, {"id": "060", "word": "can", "meaning": "~할 수 있다", "rank": 60}, {"id": "061", "word": "said", "meaning": "말했다", "rank": 61}, {"id": "062", "word": "there", "meaning": "거기에", "rank": 62}, {"id": "063", "word": "use", "meaning": "사용하다", "rank": 63}, {"id": "064", "word": "an", "meaning": "하나의(모음 앞)", "rank": 64}, {"id": "065", "word": "each", "meaning": "각각의", "rank": 65}, {"id": "066", "word": "which", "meaning": "어느 것", "rank": 66}, {"id": "067", "word": "she", "meaning": "그녀", "rank": 67}, {"id": "068", "word": "do", "meaning": "하다", "rank": 68}, {"id": "069", "word": "how", "meaning": "어떻게", "rank": 69}, {"id": "070", "word": "their", "meaning": "그들의", "rank": 70}, {"id": "071", "word": "her", "meaning": "그녀의", "rank": 71}, {"id": "072", "word": "would", "meaning": "~할 것이다", "rank": 72}, {"id": "073", "word": "make", "meaning": "만들다", "rank": 73}, {"id": "074", "word": "like", "meaning": "~같은, 좋아하다", "rank": 74}, {"id": "075", "word": "him", "meaning": "그를", "rank": 75}, {"id": "076", "word": "into", "meaning": "~안으로", "rank": 76}, {"id": "077", "word": "time", "meaning": "시간", "rank": 77}, {"id": "078", "word": "has", "meaning": "(have의 3인칭)", "rank": 78}, {"id": "079", "word": "look", "meaning": "보다", "rank": 79}, {"id": "080", "word": "two", "meaning": "둘", "rank": 80}, {"id": "081", "word": "more", "meaning": "더 많은", "rank": 81}, {"id": "082", "word": "write", "meaning": "쓰다", "rank": 82}, {"id": "083", "word": "go", "meaning": "가다", "rank": 83}, {"id": "084", "word": "who", "meaning": "누구", "rank": 84}, {"id": "085", "word": "am", "meaning": "(be동사, 1인칭)", "rank": 85}, {"id": "086", "word": "its", "meaning": "그것의", "rank": 86}, {"id": "087", "word": "now", "meaning": "지금", "rank": 87}, {"id": "088", "word": "find", "meaning": "찾다", "rank": 88}, {"id": "089", "word": "long", "meaning": "긴", "rank": 89}, {"id": "090", "word": "down", "meaning": "아래로", "rank": 90}, {"id": "091", "word": "day", "meaning": "하루, 날", "rank": 91}, {"id": "092", "word": "did", "meaning": "(do의 과거)", "rank": 92}, {"id": "093", "word": "get", "meaning": "얻다", "rank": 93}, {"id": "094", "word": "come", "meaning": "오다", "rank": 94}, {"id": "095", "word": "made", "meaning": "(make의 과거)", "rank": 95}, {"id": "096", "word": "may", "meaning": "~일지도 모른다", "rank": 96}, {"id": "097", "word": "from", "meaning": "~로부터", "rank": 97}, {"id": "098", "word": "if", "meaning": "만약", "rank": 98}, {"id": "099", "word": "see", "meaning": "보다", "rank": 99}, {"id": "100", "word": "part", "meaning": "부분", "rank": 100}, {"id": "101", "word": "over", "meaning": "~위에, 넘어서", "rank": 101}, {"id": "102", "word": "new", "meaning": "새로운", "rank": 102}, {"id": "103", "word": "sound", "meaning": "소리", "rank": 103}, {"id": "104", "word": "take", "meaning": "가지다, 취하다", "rank": 104}, {"id": "105", "word": "only", "meaning": "오직", "rank": 105}, {"id": "106", "word": "little", "meaning": "작은", "rank": 106}, {"id": "107", "word": "work", "meaning": "일하다", "rank": 107}, {"id": "108", "word": "know", "meaning": "알다", "rank": 108}, {"id": "109", "word": "place", "meaning": "장소", "rank": 109}, {"id": "110", "word": "years", "meaning": "해, 년", "rank": 110}, {"id": "111", "word": "live", "meaning": "살다", "rank": 111}, {"id": "112", "word": "me", "meaning": "나를", "rank": 112}, {"id": "113", "word": "back", "meaning": "뒤로", "rank": 113}, {"id": "114", "word": "say", "meaning": "말하다", "rank": 114}, {"id": "115", "word": "great", "meaning": "위대한, 대단한", "rank": 115}, {"id": "116", "word": "where", "meaning": "어디에", "rank": 116}, {"id": "117", "word": "help", "meaning": "돕다", "rank": 117}, {"id": "118", "word": "through", "meaning": "~을 통해", "rank": 118}, {"id": "119", "word": "much", "meaning": "많은", "rank": 119}, {"id": "120", "word": "before", "meaning": "~전에", "rank": 120}, {"id": "121", "word": "line", "meaning": "선", "rank": 121}, {"id": "122", "word": "right", "meaning": "오른쪽, 맞는", "rank": 122}, {"id": "123", "word": "too", "meaning": "너무", "rank": 123}, {"id": "124", "word": "means", "meaning": "의미하다", "rank": 124}, {"id": "125", "word": "old", "meaning": "오래된, 나이든", "rank": 125}, {"id": "126", "word": "any", "meaning": "어느, 아무", "rank": 126}, {"id": "127", "word": "set", "meaning": "놓다, 세트", "rank": 127}, {"id": "128", "word": "put", "meaning": "놓다", "rank": 128}, {"id": "129", "word": "end", "meaning": "끝", "rank": 129}, {"id": "130", "word": "does", "meaning": "(do의 3인칭)", "rank": 130}, {"id": "131", "word": "another", "meaning": "또 다른", "rank": 131}, {"id": "132", "word": "well", "meaning": "잘", "rank": 132}, {"id": "133", "word": "large", "meaning": "큰", "rank": 133}, {"id": "134", "word": "must", "meaning": "~해야 한다", "rank": 134}, {"id": "135", "word": "big", "meaning": "큰", "rank": 135}, {"id": "136", "word": "even", "meaning": "~조차", "rank": 136}, {"id": "137", "word": "such", "meaning": "그러한", "rank": 137}, {"id": "138", "word": "because", "meaning": "왜냐하면", "rank": 138}, {"id": "139", "word": "turn", "meaning": "돌다", "rank": 139}, {"id": "140", "word": "try", "meaning": "시도하다", "rank": 140}, {"id": "141", "word": "kind", "meaning": "종류, 친절한", "rank": 141}, {"id": "142", "word": "hand", "meaning": "손", "rank": 142}, {"id": "143", "word": "picture", "meaning": "그림", "rank": 143}, {"id": "144", "word": "again", "meaning": "다시", "rank": 144}, {"id": "145", "word": "change", "meaning": "바꾸다", "rank": 145}, {"id": "146", "word": "off", "meaning": "꺼진, 떨어져", "rank": 146}, {"id": "147", "word": "play", "meaning": "놀다", "rank": 147}, {"id": "148", "word": "spell", "meaning": "철자를 쓰다", "rank": 148}, {"id": "149", "word": "air", "meaning": "공기", "rank": 149}, {"id": "150", "word": "away", "meaning": "멀리", "rank": 150}, {"id": "151", "word": "animal", "meaning": "동물", "rank": 151}, {"id": "152", "word": "house", "meaning": "집", "rank": 152}, {"id": "153", "word": "give", "meaning": "주다", "rank": 153}, {"id": "154", "word": "most", "meaning": "대부분의", "rank": 154}, {"id": "155", "word": "very", "meaning": "매우", "rank": 155}, {"id": "156", "word": "after", "meaning": "~후에", "rank": 156}, {"id": "157", "word": "things", "meaning": "것들, 물건들", "rank": 157}, {"id": "158", "word": "our", "meaning": "우리의", "rank": 158}, {"id": "159", "word": "just", "meaning": "단지, 방금", "rank": 159}, {"id": "160", "word": "name", "meaning": "이름", "rank": 160}, {"id": "161", "word": "good", "meaning": "좋은", "rank": 161}, {"id": "162", "word": "sentence", "meaning": "문장", "rank": 162}, {"id": "163", "word": "man", "meaning": "남자", "rank": 163}, {"id": "164", "word": "think", "meaning": "생각하다", "rank": 164}, {"id": "165", "word": "same", "meaning": "같은", "rank": 165}, {"id": "166", "word": "tell", "meaning": "말하다", "rank": 166}, {"id": "167", "word": "boy", "meaning": "소년", "rank": 167}, {"id": "168", "word": "follow", "meaning": "따르다", "rank": 168}, {"id": "169", "word": "came", "meaning": "(come의 과거)", "rank": 169}, {"id": "170", "word": "want", "meaning": "원하다", "rank": 170}, {"id": "171", "word": "show", "meaning": "보여주다", "rank": 171}, {"id": "172", "word": "also", "meaning": "또한", "rank": 172}, {"id": "173", "word": "around", "meaning": "주위에", "rank": 173}, {"id": "174", "word": "form", "meaning": "형태", "rank": 174}, {"id": "175", "word": "three", "meaning": "셋", "rank": 175}, {"id": "176", "word": "small", "meaning": "작은", "rank": 176}, {"id": "177", "word": "here", "meaning": "여기", "rank": 177}, {"id": "178", "word": "why", "meaning": "왜", "rank": 178}, {"id": "179", "word": "ask", "meaning": "묻다", "rank": 179}, {"id": "180", "word": "went", "meaning": "(go의 과거)", "rank": 180}, {"id": "181", "word": "men", "meaning": "남자들", "rank": 181}, {"id": "182", "word": "read", "meaning": "읽다", "rank": 182}, {"id": "183", "word": "need", "meaning": "필요하다", "rank": 183}, {"id": "184", "word": "land", "meaning": "땅", "rank": 184}, {"id": "185", "word": "different", "meaning": "다른", "rank": 185}, {"id": "186", "word": "home", "meaning": "집", "rank": 186}, {"id": "187", "word": "us", "meaning": "우리를", "rank": 187}, {"id": "188", "word": "move", "meaning": "움직이다", "rank": 188}, {"id": "189", "word": "point", "meaning": "점, 요점", "rank": 189}, {"id": "190", "word": "page", "meaning": "페이지", "rank": 190}, {"id": "191", "word": "letter", "meaning": "편지, 글자", "rank": 191}, {"id": "192", "word": "mother", "meaning": "어머니", "rank": 192}, {"id": "193", "word": "answer", "meaning": "대답", "rank": 193}, {"id": "194", "word": "found", "meaning": "(find의 과거)", "rank": 194}, {"id": "195", "word": "study", "meaning": "공부하다", "rank": 195}, {"id": "196", "word": "still", "meaning": "여전히", "rank": 196}, {"id": "197", "word": "learn", "meaning": "배우다", "rank": 197}, {"id": "198", "word": "should", "meaning": "~해야 한다", "rank": 198}, {"id": "199", "word": "America", "meaning": "미국", "rank": 199}, {"id": "200", "word": "world", "meaning": "세계", "rank": 200}, {"id": "201", "word": "high", "meaning": "높은", "rank": 201}, {"id": "202", "word": "every", "meaning": "모든", "rank": 202}, {"id": "203", "word": "near", "meaning": "가까운", "rank": 203}, {"id": "204", "word": "add", "meaning": "더하다", "rank": 204}, {"id": "205", "word": "food", "meaning": "음식", "rank": 205}, {"id": "206", "word": "between", "meaning": "사이에", "rank": 206}, {"id": "207", "word": "own", "meaning": "자신의", "rank": 207}, {"id": "208", "word": "below", "meaning": "아래에", "rank": 208}, {"id": "209", "word": "country", "meaning": "나라", "rank": 209}, {"id": "210", "word": "plant", "meaning": "식물", "rank": 210}, {"id": "211", "word": "last", "meaning": "마지막", "rank": 211}, {"id": "212", "word": "school", "meaning": "학교", "rank": 212}, {"id": "213", "word": "father", "meaning": "아버지", "rank": 213}, {"id": "214", "word": "keep", "meaning": "유지하다", "rank": 214}, {"id": "215", "word": "tree", "meaning": "나무", "rank": 215}, {"id": "216", "word": "never", "meaning": "결코 ~않다", "rank": 216}, {"id": "217", "word": "start", "meaning": "시작하다", "rank": 217}, {"id": "218", "word": "city", "meaning": "도시", "rank": 218}, {"id": "219", "word": "earth", "meaning": "지구", "rank": 219}, {"id": "220", "word": "eyes", "meaning": "눈들", "rank": 220}, {"id": "221", "word": "light", "meaning": "빛", "rank": 221}, {"id": "222", "word": "thought", "meaning": "생각(think 과거)", "rank": 222}, {"id": "223", "word": "head", "meaning": "머리", "rank": 223}, {"id": "224", "word": "under", "meaning": "~아래에", "rank": 224}, {"id": "225", "word": "story", "meaning": "이야기", "rank": 225}, {"id": "226", "word": "saw", "meaning": "(see의 과거)", "rank": 226}, {"id": "227", "word": "left", "meaning": "왼쪽, 떠난", "rank": 227}, {"id": "228", "word": "don't", "meaning": "~하지 않다", "rank": 228}, {"id": "229", "word": "few", "meaning": "몇몇의", "rank": 229}, {"id": "230", "word": "while", "meaning": "~동안", "rank": 230}, {"id": "231", "word": "along", "meaning": "~을 따라", "rank": 231}, {"id": "232", "word": "might", "meaning": "~일지도 모른다", "rank": 232}, {"id": "233", "word": "close", "meaning": "닫다, 가까운", "rank": 233}, {"id": "234", "word": "something", "meaning": "어떤 것", "rank": 234}, {"id": "235", "word": "seem", "meaning": "~처럼 보이다", "rank": 235}, {"id": "236", "word": "next", "meaning": "다음", "rank": 236}, {"id": "237", "word": "hard", "meaning": "어려운, 단단한", "rank": 237}, {"id": "238", "word": "open", "meaning": "열다", "rank": 238}, {"id": "239", "word": "example", "meaning": "예시", "rank": 239}, {"id": "240", "word": "begin", "meaning": "시작하다", "rank": 240}, {"id": "241", "word": "life", "meaning": "삶", "rank": 241}, {"id": "242", "word": "always", "meaning": "항상", "rank": 242}, {"id": "243", "word": "those", "meaning": "그것들", "rank": 243}, {"id": "244", "word": "both", "meaning": "둘 다", "rank": 244}, {"id": "245", "word": "paper", "meaning": "종이", "rank": 245}, {"id": "246", "word": "together", "meaning": "함께", "rank": 246}, {"id": "247", "word": "got", "meaning": "(get의 과거)", "rank": 247}, {"id": "248", "word": "group", "meaning": "그룹", "rank": 248}, {"id": "249", "word": "often", "meaning": "자주", "rank": 249}, {"id": "250", "word": "run", "meaning": "달리다", "rank": 250}, {"id": "251", "word": "important", "meaning": "중요한", "rank": 251}, {"id": "252", "word": "until", "meaning": "~까지", "rank": 252}, {"id": "253", "word": "children", "meaning": "아이들", "rank": 253}, {"id": "254", "word": "side", "meaning": "옆, 측면", "rank": 254}, {"id": "255", "word": "feet", "meaning": "발들", "rank": 255}, {"id": "256", "word": "car", "meaning": "자동차", "rank": 256}, {"id": "257", "word": "mile", "meaning": "마일", "rank": 257}, {"id": "258", "word": "night", "meaning": "밤", "rank": 258}, {"id": "259", "word": "walk", "meaning": "걷다", "rank": 259}, {"id": "260", "word": "white", "meaning": "흰", "rank": 260}, {"id": "261", "word": "sea", "meaning": "바다", "rank": 261}, {"id": "262", "word": "began", "meaning": "(begin의 과거)", "rank": 262}, {"id": "263", "word": "grow", "meaning": "자라다", "rank": 263}, {"id": "264", "word": "took", "meaning": "(take의 과거)", "rank": 264}, {"id": "265", "word": "river", "meaning": "강", "rank": 265}, {"id": "266", "word": "four", "meaning": "넷", "rank": 266}, {"id": "267", "word": "carry", "meaning": "옮기다", "rank": 267}, {"id": "268", "word": "state", "meaning": "주, 상태", "rank": 268}, {"id": "269", "word": "once", "meaning": "한 번", "rank": 269}, {"id": "270", "word": "book", "meaning": "책", "rank": 270}, {"id": "271", "word": "hear", "meaning": "듣다", "rank": 271}, {"id": "272", "word": "stop", "meaning": "멈추다", "rank": 272}, {"id": "273", "word": "without", "meaning": "~없이", "rank": 273}, {"id": "274", "word": "second", "meaning": "두 번째", "rank": 274}, {"id": "275", "word": "late", "meaning": "늦은", "rank": 275}, {"id": "276", "word": "miss", "meaning": "놓치다, 그리워하다", "rank": 276}, {"id": "277", "word": "idea", "meaning": "생각, 아이디어", "rank": 277}, {"id": "278", "word": "enough", "meaning": "충분한", "rank": 278}, {"id": "279", "word": "eat", "meaning": "먹다", "rank": 279}, {"id": "280", "word": "face", "meaning": "얼굴", "rank": 280}, {"id": "281", "word": "watch", "meaning": "보다, 시계", "rank": 281}, {"id": "282", "word": "far", "meaning": "먼", "rank": 282}, {"id": "283", "word": "Indian", "meaning": "인디언, 인도의", "rank": 283}, {"id": "284", "word": "real", "meaning": "진짜의", "rank": 284}, {"id": "285", "word": "almost", "meaning": "거의", "rank": 285}, {"id": "286", "word": "let", "meaning": "~하게 하다", "rank": 286}, {"id": "287", "word": "above", "meaning": "~위에", "rank": 287}, {"id": "288", "word": "girl", "meaning": "소녀", "rank": 288}, {"id": "289", "word": "sometimes", "meaning": "때때로", "rank": 289}, {"id": "290", "word": "mountains", "meaning": "산들", "rank": 290}, {"id": "291", "word": "cut", "meaning": "자르다", "rank": 291}, {"id": "292", "word": "young", "meaning": "젊은", "rank": 292}, {"id": "293", "word": "talk", "meaning": "이야기하다", "rank": 293}, {"id": "294", "word": "soon", "meaning": "곧", "rank": 294}, {"id": "295", "word": "list", "meaning": "목록", "rank": 295}, {"id": "296", "word": "song", "meaning": "노래", "rank": 296}, {"id": "297", "word": "being", "meaning": "(be의 현재분사) ~인 상태", "rank": 297}, {"id": "298", "word": "leave", "meaning": "떠나다", "rank": 298}, {"id": "299", "word": "family", "meaning": "가족", "rank": 299}, {"id": "300", "word": "it's", "meaning": "그것은 ~이다", "rank": 300}];
+
+const GROUP_SIZE = 25;
+const GROUPS = [];
+for(let i=0;i<WORDS.length;i+=GROUP_SIZE){
+  GROUPS.push(WORDS.slice(i, i+GROUP_SIZE));
+}
+
+const STORAGE_KEY = 'sightwords300_known_v1';
+function loadKnown(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveKnown(obj){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }catch(e){}
+}
+let known = loadKnown();
+
+// ===== Navigation =====
+const screens = {
+  home: document.getElementById('screen-home'),
+  flash: document.getElementById('screen-flash'),
+  list: document.getElementById('screen-list'),
+  quiz: document.getElementById('screen-quiz'),
+};
+const navBtns = document.querySelectorAll('.nav-btn');
+function showScreen(name){
+  Object.values(screens).forEach(s=>s.classList.remove('active'));
+  navBtns.forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+  screens[name].classList.add('active');
+  if(name==='home') renderHome();
+}
+navBtns.forEach(b=>b.addEventListener('click', ()=>{
+  if(b.dataset.screen==='flash' && !currentGroup){ alert('먼저 홈에서 그룹을 선택해주세요.'); showScreen('home'); return; }
+  if(b.dataset.screen==='list' && !currentGroup){ currentGroup = GROUPS[0]; currentGroupIndex=0; }
+  if(b.dataset.screen==='quiz' && !currentGroup){ currentGroup = GROUPS[0]; currentGroupIndex=0; }
+  if(b.dataset.screen==='list') renderList();
+  if(b.dataset.screen==='quiz') startQuiz();
+  showScreen(b.dataset.screen);
+}));
+
+document.getElementById('flash-back').onclick = ()=>showScreen('home');
+document.getElementById('list-back').onclick = ()=>showScreen('home');
+document.getElementById('quiz-back').onclick = ()=>showScreen('home');
+
+// ===== Home =====
+function renderHome(){
+  const totalKnown = Object.keys(known).filter(k=>known[k]).length;
+  document.getElementById('stat-known').textContent = totalKnown;
+  document.getElementById('stat-total').textContent = WORDS.length;
+  document.getElementById('stat-pct').textContent = Math.round(totalKnown/WORDS.length*100)+'%';
+
+  const grid = document.getElementById('group-grid');
+  grid.innerHTML = '';
+  GROUPS.forEach((g, idx)=>{
+    const gk = g.filter(w=>known[w.id]).length;
+    const div = document.createElement('div');
+    div.className = 'group-btn';
+    div.innerHTML = `그룹 ${idx+1}<span class="rng">${g[0].rank}-${g[g.length-1].rank}</span><span class="pct">${gk}/${g.length}</span>`;
+    div.onclick = ()=>{
+      currentGroup = g;
+      currentGroupIndex = idx;
+      startFlash();
+      showScreen('flash');
+    };
+    grid.appendChild(div);
+  });
+}
+
+// ===== Flash mode =====
+let currentGroup = null;
+let currentGroupIndex = 0;
+let flashPos = 0;
+let flashTimer = null;
+let flashOrder = [];
+
+function startFlash(){
+  flashOrder = [...currentGroup];
+  flashPos = 0;
+  showFlashCard();
+}
+// ===== 음성(voice) 선택 =====
+// 브라우저마다 탑재된 음성 품질이 다름. Google/Microsoft Natural 계열의
+// 원격(non-local) 영어 음성이 로컬 기본 음성보다 훨씬 또렷하고 자연스러움.
+let preferredVoice = null;
+function pickBestVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const voices = speechSynthesis.getVoices();
+  if(!voices.length) return;
+  const enVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  const pool = enVoices.length ? enVoices : voices;
+  const priorityNames = [
+    'Aria',    // Microsoft Aria (Natural) - 문찬영님이 설치한 여성 음성
+    'Jenny',   // Microsoft Jenny (Natural)
+    'Ava',     // Microsoft Ava (Natural HD)
+    'Google US English',
+    'Andrew',  // Microsoft Andrew (Natural HD)
+    'Guy',     // Microsoft Guy (Natural)
+    'Samantha',
+  ];
+  for(const name of priorityNames){
+    const found = pool.find(v => v.name.includes(name));
+    if(found){ preferredVoice = found; return; }
+  }
+  // 이름 매칭 실패 시: 로컬 음성이 아닌(원격/고품질일 확률이 높은) en-US 음성 우선
+  const remoteUS = pool.find(v => v.lang === 'en-US' && !v.localService);
+  if(remoteUS){ preferredVoice = remoteUS; return; }
+  const anyUS = pool.find(v => v.lang === 'en-US');
+  preferredVoice = anyUS || pool[0];
+}
+if('speechSynthesis' in window){
+  pickBestVoice();
+  speechSynthesis.onvoiceschanged = pickBestVoice;
+}
+
+// 3글자 이하 짧은 기능어(to, a, of 등)는 문장 끝처럼 처리되지 않으면
+// TTS 엔진이 끝소리를 뭉개는 경우가 많음(to→do처럼 들림).
+// 마침표를 붙여 "문장이 끝나는 위치"로 인식시키면 조음이 훨씬 또렷해짐.
+function speakWord(word){
+  if(!('speechSynthesis' in window) || !word) return;
+  const text = word.length <= 3 && /^[a-zA-Z']+$/.test(word) ? word + '.' : word;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US';
+  if(preferredVoice) u.voice = preferredVoice;
+  u.rate = 0.92;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function showFlashCard(){
+  clearTimeout(flashTimer);
+  if(flashPos >= flashOrder.length){
+    document.getElementById('flash-word').textContent = '완료! 🎉';
+    document.getElementById('flash-meaning').textContent = '홈으로 돌아가 다른 그룹을 선택하세요';
+    document.getElementById('flash-meaning').classList.add('show');
+    document.getElementById('flash-progress').textContent = `${flashOrder.length} / ${flashOrder.length}`;
+    document.getElementById('flash-prev').disabled = false;
+    document.getElementById('flash-next').disabled = true;
+    return;
+  }
+  updateNavButtons();
+  const item = flashOrder[flashPos];
+  document.getElementById('flash-progress').textContent = `${flashPos+1} / ${flashOrder.length}`;
+  document.getElementById('flash-word').textContent = item.word;
+  const meaningEl = document.getElementById('flash-meaning');
+  meaningEl.textContent = item.meaning;
+  meaningEl.classList.remove('show');
+  speakWord(item.word);
+
+  const speed = parseInt(document.getElementById('speed-select').value, 10);
+  if(speed > 0){
+    flashTimer = setTimeout(()=>{ meaningEl.classList.add('show'); }, speed);
+  }
+}
+document.getElementById('flash-card').addEventListener('click', ()=>{
+  document.getElementById('flash-meaning').classList.add('show');
+});
+document.getElementById('flash-speak').onclick = ()=>{
+  const item = flashOrder[flashPos];
+  if(item) speakWord(item.word);
+};
+function updateNavButtons(){
+  const prevBtn = document.getElementById('flash-prev');
+  const nextBtn = document.getElementById('flash-next');
+  prevBtn.disabled = flashPos <= 0;
+  nextBtn.disabled = flashPos >= flashOrder.length - 1;
+}
+// 화살표: 기록 없이 자유롭게 이동만
+document.getElementById('flash-prev').onclick = ()=>{
+  if(flashPos > 0){ flashPos--; showFlashCard(); }
+};
+document.getElementById('flash-next').onclick = ()=>{
+  if(flashPos < flashOrder.length - 1){ flashPos++; showFlashCard(); }
+};
+// 암기함/모름: 기록 남기고 자동으로 다음 카드로 이동
+function nextFlash(markKnown){
+  const item = flashOrder[flashPos];
+  if(item){
+    known[item.id] = markKnown;
+    saveKnown(known);
+  }
+  flashPos++;
+  showFlashCard();
+}
+document.getElementById('flash-know').onclick = ()=>nextFlash(true);
+document.getElementById('flash-unknow').onclick = ()=>nextFlash(false);
+
+// ===== List mode =====
+function renderList(){
+  const container = document.getElementById('list-container');
+  container.innerHTML = '';
+  if(!currentGroup){ container.innerHTML = '<div class="empty">홈에서 그룹을 선택해주세요</div>'; return; }
+  currentGroup.forEach(item=>{
+    const div = document.createElement('div');
+    const status = known[item.id]; // true = 암기함, false = 모름, undefined = 미확인
+    let statusClass = '';
+    let icon = '';
+    if(status === true){ statusClass = 'status-known'; icon = '✓'; }
+    else if(status === false){ statusClass = 'status-unknown'; icon = '✕'; }
+    div.className = 'list-item' + (statusClass ? ' ' + statusClass : '');
+    div.innerHTML = `<span class="list-rank">${item.rank}</span><span class="list-status-icon">${icon}</span><span class="list-word">${item.word}</span><span class="list-meaning">${item.meaning}</span>`;
+    div.onclick = ()=> speakWord(item.word);
+    container.appendChild(div);
+  });
+}
+
+// ===== Quiz mode =====
+let quizQueue = [];
+let quizPos = 0;
+let quizScore = 0;
+
+function startQuiz(){
+  if(!currentGroup){ currentGroup = GROUPS[0]; currentGroupIndex = 0; }
+  quizQueue = shuffle([...currentGroup]).slice(0, Math.min(10, currentGroup.length));
+  quizPos = 0;
+  quizScore = 0;
+  showQuizQuestion();
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function showQuizQuestion(){
+  if(quizPos >= quizQueue.length){
+    document.getElementById('quiz-word').textContent = `${quizScore} / ${quizQueue.length} 정답!`;
+    document.getElementById('quiz-status').textContent = '완료! 홈에서 다른 그룹을 선택해보세요';
+    document.getElementById('quiz-options').innerHTML = '';
+    return;
+  }
+  const item = quizQueue[quizPos];
+  document.getElementById('quiz-status').textContent = `문제 ${quizPos+1} / ${quizQueue.length}`;
+  document.getElementById('quiz-word').textContent = item.word;
+
+  const wrongPool = WORDS.filter(w=>w.id!==item.id);
+  const wrongs = shuffle(wrongPool).slice(0,3).map(w=>w.meaning);
+  const options = shuffle([item.meaning, ...wrongs]);
+
+  const optsEl = document.getElementById('quiz-options');
+  optsEl.innerHTML = '';
+  options.forEach(opt=>{
+    const btn = document.createElement('button');
+    btn.className = 'quiz-opt';
+    btn.textContent = opt;
+    btn.onclick = ()=>{
+      const isCorrect = opt === item.meaning;
+      document.querySelectorAll('.quiz-opt').forEach(b=>{
+        b.onclick = null;
+        if(b.textContent === item.meaning) b.classList.add('correct');
+        else if(b===btn) b.classList.add('wrong');
+      });
+      known[item.id] = isCorrect;
+      saveKnown(known);
+      if(isCorrect) quizScore++;
+      setTimeout(()=>{
+        quizPos++;
+        showQuizQuestion();
+      }, 700);
+    };
+    optsEl.appendChild(btn);
+  });
+}
+
+renderHome();
+</script>
+</body>
+</html>
